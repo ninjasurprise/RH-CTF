@@ -49,3 +49,33 @@
         permanent: true
         state: enabled
         immediate: yes
+
+- name: Setup scheduled task to log cockpit service status
+  hosts: localhost
+  become: yes
+  tasks:
+    - name: Ensure the cron package is installed
+      package:
+        name: cron
+        state: present
+
+    - name: Create the script that queries the cockpit service status
+      copy:
+        dest: /usr/local/bin/check_cockpit_status.sh
+        content: |
+          #!/bin/bash
+          # Check if cockpit service is running and append the status to the log
+          if systemctl is-active --quiet cockpit; then
+            echo "$(date) - Cockpit service is running" >> /var/log/automation.log
+          else
+            echo "$(date) - Cockpit service is not running" >> /var/log/automation.log
+          fi
+        mode: '0755'
+
+    - name: Create a cron job for runningaway task
+      cron:
+        name: "runningaway"
+        minute: "*/5"  # Every 5 minutes
+        job: "/usr/local/bin/check_cockpit_status.sh"
+        state: present
+
