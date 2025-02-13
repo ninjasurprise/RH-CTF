@@ -1,0 +1,51 @@
+---
+- name: Setup NTP and Cockpit on RHEL 9 System
+  hosts: all
+  become: true
+  tasks:
+
+    - name: Ensure chrony package is installed
+      package:
+        name: chrony
+        state: present
+
+    - name: Start and enable chronyd service
+      systemd:
+        name: chronyd
+        state: started
+        enabled: true
+
+    - name: Configure NTP server to use north-america.pool.ntp.org
+      lineinfile:
+        path: /etc/chrony.conf
+        regexp: '^server'
+        line: 'server north-america.pool.ntp.org iburst'
+        create: yes
+
+    - name: Restart chronyd service to apply changes
+      systemd:
+        name: chronyd
+        state: restarted
+
+    - name: Verify chronyd service is running
+      systemd:
+        name: chronyd
+        state: started
+
+    - name: Ensure cockpit package is installed
+      package:
+        name: cockpit-ws
+        state: present
+
+    - name: Start and enable cockpit service
+      systemd:
+        name: cockpit-ws
+        state: started
+        enabled: true
+
+    - name: Open Cockpit port in the firewall
+      firewalld:
+        service: cockpit-ws
+        permanent: true
+        state: enabled
+        immediate: yes
